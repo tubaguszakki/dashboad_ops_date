@@ -53,8 +53,14 @@ const between = (d, a, b) => {
 const fmtDisplay = d =>
   d ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
-/** Format date as ISO string YYYY-MM-DD */
-const fmtISO = d => d ? d.toISOString().split('T')[0] : '';
+/** Format date as ISO string YYYY-MM-DD (timezone-safe) */
+const fmtISO = d => {
+  if (!d) return '';
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
 
 /** Day difference between two dates */
 const dayDiff = (a, b) => Math.round((b - a) / 864e5);
