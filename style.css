@@ -10,15 +10,18 @@ body {
   font-size: 13px;
   background: #eef3f8;
   padding: 12px;
+  align-items: center;
+  height: 100%;
 }
 
 /* ─ Card wrapper ─────────────────────────────────────────── */
 .card {
+  margin: 0 auto;
   background: white;
   border-radius: 10px;
   border: 1px solid #ccdaea;
   padding: 16px;
-  max-width: 480px;
+  height: 100%
 }
 
 /* ─ Mode pills (Range / Single date) ────────────────────── */
