@@ -523,25 +523,73 @@ function updateApplyBtn() {
 
 
 // ─────────────────────────────────────────────────────────
-// Apply – send payload to Tableau via postMessage
+// Tableau Extensions API – initialize
+// ─────────────────────────────────────────────────────────
+
+let tableauReady = false;
+
+/**
+ * Try to initialize Tableau Extensions API.
+ * Works only when loaded inside Tableau as an extension.
+ * Falls back gracefully when opened in a regular browser.
+ */
+function initTableau() {
+  if (typeof tableau === 'undefined' || !tableau.extensions) {
+    console.log('[DatePicker] Running outside Tableau — postMessage only mode.');
+    return;
+  }
+
+  tableau.extensions.initializeAsync().then(() => {
+    tableauReady = true;
+    console.log('[DatePicker] Tableau Extensions API ready.');
+  }).catch(err => {
+    console.warn('[DatePicker] Tableau init failed:', err);
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// Apply – send payload to Tableau
 // ─────────────────────────────────────────────────────────
 
 /**
- * Sends selected dates to the Tableau dashboard embedded as parent.
- * Tableau listens for window message with type 'DATEPICKER_UPDATE'.
- *
- * Payload shape:
- * {
- *   type:       'DATEPICKER_UPDATE',
- *   mode:       'range' | 'single',
- *   comparison: boolean,
- *   aStart:     'YYYY-MM-DD',
- *   aEnd:       'YYYY-MM-DD',
- *   bStart:     'YYYY-MM-DD' | '',
- *   bEnd:       'YYYY-MM-DD' | '',
- * }
+ * Update Tableau parameters directly via Extensions API.
+ * Parameter names must match exactly what's created in Tableau:
+ *   P_A_Start, P_A_End, P_B_Start, P_B_End, P_Comparison
  */
-function applyAll() {
+async function updateTableauParams(payload) {
+  if (!tableauReady) return;
+
+  try {
+    const dashboard = tableau.extensions.dashboardContent.dashboard;
+    const params    = await dashboard.getParametersAsync();
+
+    const set = async (name, value) => {
+      const param = params.find(p => p.name === name);
+      if (!param) { console.warn(`[DatePicker] Parameter "${name}" tidak ditemukan di Tableau.`); return; }
+      await param.changeValueAsync(value);
+    };
+
+    await set('P_A_Start',    payload.aStart);
+    await set('P_A_End',      payload.aEnd);
+    await set('P_Comparison', payload.comparison ? 'On' : 'Off');
+
+    if (payload.comparison) {
+      await set('P_B_Start', payload.bStart);
+      await set('P_B_End',   payload.bEnd);
+    }
+
+    console.log('[DatePicker] Parameters updated:', payload);
+  } catch (err) {
+    console.error('[DatePicker] Gagal update parameter:', err);
+  }
+}
+
+/**
+ * Main apply function.
+ * 1. Sends postMessage (fallback / for testing)
+ * 2. Updates Tableau parameters directly via Extensions API
+ */
+async function applyAll() {
   const payload = {
     type:       'DATEPICKER_UPDATE',
     mode,
@@ -552,7 +600,11 @@ function applyAll() {
     bEnd:       comp && mode === 'range' ? fmtISO(sel.bE) : comp ? fmtISO(sel.bS) : '',
   };
 
+  // 1. postMessage (untuk testing di browser biasa)
   window.parent.postMessage(payload, '*');
+
+  // 2. Tableau Extensions API (saat dipakai sebagai extension)
+  await updateTableauParams(payload);
 
   // Visual feedback
   const btn = el('apply-btn');
@@ -568,3 +620,4 @@ function applyAll() {
 // ─────────────────────────────────────────────────────────
 
 renderUI();
+initTableau();
