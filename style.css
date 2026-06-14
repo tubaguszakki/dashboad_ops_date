@@ -183,6 +183,7 @@ body {
 .dy {
   width: 100%;
   aspect-ratio: 1;
+  max-height: 30px;
   border: none;
   background: none;
   font-size: 12px;
